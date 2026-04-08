@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D 正方体交互原型</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f5f4f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+    gap: 1.5rem;
+  }
+  h1 {
+    font-size: 18px;
+    font-weight: 500;
+    color: #2c2c2a;
+    letter-spacing: 0.02em;
+  }
+  #canvas-wrap {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid rgba(0,0,0,0.08);
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  canvas {
+    display: block;
+    cursor: grab;
+    touch-action: none;
+  }
+  canvas:active { cursor: grabbing; }
+  .controls {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  button {
+    font-size: 13px;
+    font-family: inherit;
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.15);
+    background: #fff;
+    color: #2c2c2a;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  button:hover { background: #eeedfe; border-color: #7f77dd; color: #3c3489; }
+  button.active { background: #7f77dd; color: #fff; border-color: #534ab7; }
+  .hint {
+    font-size: 12px;
+    color: #888;
+    text-align: center;
+  }
+  .qr-section {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid rgba(0,0,0,0.08);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    max-width: 420px;
+  }
+  .qr-section p { font-size: 13px; color: #666; text-align: center; }
+  .qr-section strong { color: #2c2c2a; }
+  #qr-box { display: flex; justify-content: center; }
+  #qr-url-input {
+    width: 100%;
+    font-size: 13px;
+    font-family: inherit;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.15);
+    color: #2c2c2a;
+    outline: none;
+  }
+  #qr-url-input:focus { border-color: #7f77dd; }
+  #gen-qr-btn {
+    width: 100%;
+    background: #7f77dd;
+    color: #fff;
+    border-color: #534ab7;
+    font-size: 14px;
+    padding: 10px;
+  }
+  #gen-qr-btn:hover { background: #534ab7; }
+  .url-hint {
+    font-size: 11px;
+    color: #aaa;
+    text-align: center;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<h1>3D 正方体交互原型</h1>
+
+<div id="canvas-wrap">
+  <canvas id="cube-canvas"></canvas>
+</div>
+
+<p class="hint">鼠标拖拽 / 手机触摸滑动 来旋转</p>
+
+<div class="controls">
+  <button id="btn-wireframe">线框模式</button>
+  <button id="btn-reset">重置视角</button>
+  <button id="btn-auto">自动旋转 ▶</button>
+</div>
+
+<div class="qr-section">
+  <p><strong>生成专属二维码</strong><br>部署后把你的网址填入下方，即可生成微信可扫的二维码</p>
+  <input id="qr-url-input" type="url" placeholder="https://your-name.github.io/cube-prototype/" />
+  <button id="gen-qr-btn">生成二维码</button>
+  <div id="qr-box"></div>
+  <p class="url-hint">将此 HTML 文件上传到 GitHub Pages 或 Vercel 后，<br>把获得的网址粘贴到上方即可</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const canvas = document.getElementById('cube-canvas');
+const wrap = document.getElementById('canvas-wrap');
+const W = Math.min(window.innerWidth - 32, 420);
+const H = Math.round(W * 0.72);
+canvas.width = W; canvas.height = H;
+wrap.style.width = W + 'px';
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(W, H);
+renderer.setClearColor(0xffffff, 1);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xfafaf8);
+const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
+camera.position.set(2.6, 1.9, 2.6);
+camera.lookAt(0, 0, 0);
+
+const geo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+const faceColors = [0x7F77DD, 0x1D9E75, 0xD85A30, 0x378ADD, 0xD4537E, 0xBA7517];
+const mats = faceColors.map(c => new THREE.MeshPhongMaterial({ color: c, shininess: 70 }));
+const cube = new THREE.Mesh(geo, mats);
+scene.add(cube);
+
+const edgesGeo = new THREE.EdgesGeometry(geo);
+const edgesMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
+const edges = new THREE.LineSegments(edgesGeo, edgesMat);
+cube.add(edges);
+
+const wireMats = faceColors.map(() => new THREE.MeshBasicMaterial({ color: 0x7f77dd, wireframe: true, transparent: true, opacity: 0.15 }));
+const wireMesh = new THREE.Mesh(geo, wireMats);
+wireMesh.visible = false;
+cube.add(wireMesh);
+
+const ambLight = new THREE.AmbientLight(0xffffff, 0.45);
+scene.add(ambLight);
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+dirLight.position.set(4, 5, 4);
+scene.add(dirLight);
+const fillLight = new THREE.DirectionalLight(0xaabbff, 0.25);
+fillLight.position.set(-3, -2, -2);
+scene.add(fillLight);
+
+let rotX = 0.4, rotY = 0.5;
+let isDragging = false, autoRun = false;
+let lastX = 0, lastY = 0;
+let wireMode = false;
+
+function applyRot() { cube.rotation.x = rotX; cube.rotation.y = rotY; }
+applyRot();
+
+canvas.addEventListener('mousedown', e => { isDragging = true; lastX = e.clientX; lastY = e.clientY; });
+window.addEventListener('mouseup', () => isDragging = false);
+window.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  rotY += (e.clientX - lastX) * 0.01;
+  rotX += (e.clientY - lastY) * 0.01;
+  lastX = e.clientX; lastY = e.clientY;
+  applyRot();
+});
+
+canvas.addEventListener('touchstart', e => { e.preventDefault(); isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }, { passive: false });
+canvas.addEventListener('touchend', () => isDragging = false);
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!isDragging) return;
+  rotY += (e.touches[0].clientX - lastX) * 0.013;
+  rotX += (e.touches[0].clientY - lastY) * 0.013;
+  lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+  applyRot();
+}, { passive: false });
+
+const btnW = document.getElementById('btn-wireframe');
+btnW.addEventListener('click', () => {
+  wireMode = !wireMode;
+  mats.forEach(m => m.visible = !wireMode);
+  edges.visible = !wireMode;
+  wireMesh.visible = wireMode;
+  btnW.textContent = wireMode ? '实体模式' : '线框模式';
+  btnW.classList.toggle('active', wireMode);
+});
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  rotX = 0.4; rotY = 0.5; applyRot();
+});
+
+const btnAuto = document.getElementById('btn-auto');
+btnAuto.addEventListener('click', () => {
+  autoRun = !autoRun;
+  btnAuto.textContent = autoRun ? '停止旋转 ■' : '自动旋转 ▶';
+  btnAuto.classList.toggle('active', autoRun);
+});
+
+function animate() {
+  requestAnimationFrame(animate);
+  if (autoRun && !isDragging) { rotY += 0.008; applyRot(); }
+  renderer.render(scene, camera);
+}
+animate();
+
+let qrInstance = null;
+document.getElementById('gen-qr-btn').addEventListener('click', () => {
+  const url = document.getElementById('qr-url-input').value.trim();
+  if (!url) return;
+  const box = document.getElementById('qr-box');
+  box.innerHTML = '';
+  qrInstance = new QRCode(box, {
+    text: url,
+    width: 180,
+    height: 180,
+    colorDark: '#2c2c2a',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+});
+
+document.getElementById('qr-url-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('gen-qr-btn').click();
+});
+</script>
+</body>
+</html>
