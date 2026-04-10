@@ -35,15 +35,35 @@ canvas { display: block; touch-action: none; }
   line-height: 1.8;
 }
 .hint { font-size: 12px; color: #999; text-align: center; }
-.controls { display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; }
-button {
-  font-size: 13px; font-family: inherit;
-  padding: 8px 18px; border-radius: 8px;
-  border: 1px solid rgba(0,0,0,0.15);
-  background: #fff; color: #2c2c2a; cursor: pointer;
+.controls { display: flex; gap: 1.2rem; justify-content: center; }
+.icon-btn {
+  width: 88px; height: 72px;
+  border-radius: 22px;
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.12s, filter 0.12s;
+  padding: 0;
+  position: relative;
 }
-button:hover { background: #eeedfe; border-color: #7f77dd; color: #3c3489; }
-button.on { background: #7f77dd; color: #fff; border-color: #534ab7; }
+.icon-btn:hover { transform: scale(1.05); }
+.icon-btn:active { transform: scale(0.95); filter: brightness(0.92); }
+.btn-reset {
+  background: linear-gradient(180deg, #f0ece0 0%, #d8d4c4 100%);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.8), inset 0 -1px 2px rgba(0,0,0,0.08);
+}
+.btn-auto {
+  background: linear-gradient(180deg, #55b8f8 0%, #2a88d8 100%);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.22), inset 0 1px 1px rgba(255,255,255,0.4), inset 0 -1px 2px rgba(0,0,0,0.15);
+}
+.btn-auto.on {
+  background: linear-gradient(180deg, #2a88d8 0%, #1a68b8 100%);
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.25);
+}
+.btn-wire {
+  background: linear-gradient(180deg, #f0ece0 0%, #d8d4c4 100%);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.8), inset 0 -1px 2px rgba(0,0,0,0.08);
+}
 </style>
 </head>
 <body>
@@ -51,9 +71,38 @@ button.on { background: #7f77dd; color: #fff; border-color: #534ab7; }
 <div id="wrap"><canvas id="c"></canvas><div id="msg">模型加载中...</div></div>
 <p class="hint">拖拽旋转 · 滚轮/双指缩放 · 右键平移</p>
 <div class="controls">
-  <button id="b-reset">重置视角</button>
-  <button id="b-auto">自动旋转 ▶</button>
-  <button id="b-wire">线框模式</button>
+
+  <button id="b-reset" class="icon-btn btn-reset" title="重置视角">
+    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <text x="27" y="40"
+        text-anchor="middle"
+        font-family="Arial Rounded MT Bold, Arial, sans-serif"
+        font-size="42"
+        font-weight="900"
+        fill="#3d9c3d"
+        letter-spacing="-2">C</text>
+    </svg>
+  </button>
+
+  <button id="b-auto" class="icon-btn btn-auto" title="自动旋转">
+    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M26 8 C36.5 8 44 15.5 44 26" stroke="white" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+      <polygon points="44,15 44,27 34,22" fill="white"/>
+      <path d="M26 44 C15.5 44 8 36.5 8 26" stroke="white" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+      <polygon points="8,37 8,25 18,30" fill="white"/>
+      <polygon points="22,22 22,30 30,26" fill="white"/>
+    </svg>
+  </button>
+
+  <button id="b-wire" class="icon-btn btn-wire" title="线框/实体切换">
+    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="26,8 42,17 42,35 26,44 10,35 10,17" fill="none" stroke="#b86010" stroke-width="0"/>
+      <polygon points="26,8 42,18 26,28 10,18" fill="#e8a040"/>
+      <polygon points="10,18 26,28 26,44 10,34" fill="#c07828"/>
+      <polygon points="42,18 26,28 26,44 42,34" fill="#d08830"/>
+    </svg>
+  </button>
+
 </div>
 </div>
 
@@ -134,7 +183,6 @@ document.getElementById('b-auto').addEventListener('click', function() {
   autoOn = !autoOn;
   controls.autoRotate = autoOn;
   controls.autoRotateSpeed = 2;
-  this.textContent = autoOn ? '停止旋转 ■' : '自动旋转 ▶';
   this.classList.toggle('on', autoOn);
 });
 
@@ -151,7 +199,6 @@ document.getElementById('b-wire').addEventListener('click', function() {
       if (obj.userData._m) obj.material = obj.userData._m;
     }
   });
-  this.textContent = wireOn ? '实体模式' : '线框模式';
   this.classList.toggle('on', wireOn);
 });
 
